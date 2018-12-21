@@ -1,18 +1,14 @@
 # encoding: utf-8
 # Import packages
 
-import neurokit as nk
 import pandas as pd
-import numpy as np
-import seaborn as sns 
 import matplotlib.pyplot as plt
 
 import matplotlib
 matplotlib.use("Qt5Agg")  # 声明使用QT5
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
-from PyQt5 import QtWidgets,QtCore
-from PyQt5.QtWidgets import QMainWindow,QApplication
+
 
 class ECGData():
     def __init__(self):

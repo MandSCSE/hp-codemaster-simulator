@@ -1,8 +1,8 @@
 # encoding: utf-8
  
-import sys, random
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QPainter, QPainterPath
+import sys
+import  enum
+from PyQt5 import QtWidgets,QtCore
 from PyQt5.QtWidgets import (QWidget, QPushButton, QVBoxLayout, QHBoxLayout, QGridLayout, QApplication)
 
 
@@ -12,16 +12,12 @@ matplotlib.use('Qt5Agg')
 # Uncomment this line before running, it breaks sphinx-gallery builds
 # from PyQt5 import QtCore, QtWidgets
 
-from numpy import arange, sin, pi
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
-
-from PyQt5 import QtWidgets,QtCore
-from PyQt5.QtWidgets import QMainWindow,QApplication
-
 # project module
 from ecg import ECGData
+# from audio import audio
  
 class MainWindow(QWidget):
     def __init__(self,parent=None):
@@ -30,10 +26,10 @@ class MainWindow(QWidget):
         # ECG = displayECG()
         ECG = MyDynamicMplCanvas(self, width=5, height=4, dpi=100)
         toolBoxUP = controlToolBoxUP()
+        toolBoxUP.setECG(ECG)
         toolBoxDown = controlToolBoxDown()
          
         grid = QGridLayout()
-        vbox = QVBoxLayout()
         
         grid.addWidget(toolBoxUP, 1, 0)
         grid.addWidget(ECG, 2, 0, 3, 1)
@@ -47,14 +43,14 @@ class controlToolBoxUP(QWidget):
         QWidget.__init__(self)
         
         hbox = QHBoxLayout()
-        A1 = QPushButton('A1', self)
-        A1.setCheckable(True)
-        A2 = QPushButton('A2', self)
-        A2.setCheckable(True)       
+        A1 = QPushButton('A1 stop', self)
+        A1.clicked.connect(self.A1Clicked) 
+        
+        A2 = QPushButton('A2 resume', self)
+        A2.clicked.connect(self.A2Clicked) 
+        
         A3 = QPushButton('A3', self)
-        A3.setCheckable(True)
         A4 = QPushButton('A4', self)
-        A4.setCheckable(True)
         
         hbox.addWidget(A1)
         hbox.addWidget(A2)
@@ -62,6 +58,12 @@ class controlToolBoxUP(QWidget):
         hbox.addWidget(A4)
         
         self.setLayout(hbox)
+    def A1Clicked(self):
+        self.ECG.setState(ECGCanvasState.STOP)
+    def A2Clicked(self):
+        self.ECG.setState(ECGCanvasState.NORMAL_DATA)
+    def setECG(self,  ecg):
+        self.ECG  = ecg
         
 class controlToolBoxDown(QWidget):
     def __init__(self,parent=None):
@@ -92,28 +94,23 @@ class displayECG(QWidget):
         self.setLayout(vbox)
         self.resize(350,250)
         
-    def paintEvent(self, e):
-        qp = QPainter()
-        qp.begin(self)
-        qp.setRenderHint(QPainter.Antialiasing)
-        self.drawBezierCurve(qp)
-        qp.end()
-        
-    def drawBezierCurve(self, qp):
-
-        path = QPainterPath()
 
 # 心跳數
 class displayBPM(QWidget):
     def __init__(self,parent=None):
         QWidget.__init__(self)
+        
+class ECGCanvasState(enum.IntEnum):
+    STOP = 1
+    NORMAL_DATA = 2
 
 # 動圖(testing)
 class MyMplCanvas(FigureCanvas):
     """Ultimately, this is a QWidget (as well as a FigureCanvasAgg, etc.)."""
 
     def __init__(self, parent=None, width=5, height=4, dpi=100):
-        fig = Figure(figsize=(width, height), dpi=dpi, tight_layout=True)
+        # background color : #444444 (black)
+        fig = Figure(figsize=(width, height), dpi=dpi, tight_layout=True, facecolor="#444444")
         self.axes = fig.add_subplot(111)
 
         self.compute_initial_figure()
@@ -134,13 +131,14 @@ class MyDynamicMplCanvas(MyMplCanvas):
     """A canvas that updates itself every second with a new plot."""
 
     def __init__(self, *args, **kwargs):
-        self.MaxPoint = 400
+        self.MaxPoint = 420
         self.position = 0
         self.spaceWidth = 30
-
         self.dataPos = 0
-
         self.ecgData = ECGData()
+        self.currentState = ECGCanvasState.NORMAL_DATA
+        
+        #self.currentState = ECGCanvasState.STOP
 
         self.data = self.ecgData.getData(self.dataPos, self.MaxPoint).values
         
@@ -148,38 +146,59 @@ class MyDynamicMplCanvas(MyMplCanvas):
         timer = QtCore.QTimer(self)
         timer.timeout.connect(self.update_figure)
         timer.start(100)
-
-
-
-    def compute_initial_figure(self):
-        # 初始值，歸零
-        l = [1 for i in range(0, self.MaxPoint)]
-        self.axes.axis('off')
-        self.axes.plot(l, l, 'r')
-        pass
-
+        
+    def setState(self,  state):
+        self.currentState = state;
+        
+    def update_ECGData(self):
+        d = self.ecgData.getData(self.dataPos, self.dataPos + self.spaceWidth + 1).values
+        for i in range(self.position, self.position + self.spaceWidth):
+            self.data[(self.dataPos+i-self.position)%self.MaxPoint][0] = d[(i-self.position)%self.MaxPoint][0]
+        self.dataPos += 10
+        
+    def clear_display(self):
+        for i in range(self.position, self.position + self.spaceWidth):
+            self.data[(self.dataPos+i-self.position)%self.MaxPoint][0] = 0
+        self.dataPos += 10
+        
     def update_figure(self):
 
         l = [i for i in range(0, self.MaxPoint+1)]
+        
         # cursor
-        d = self.ecgData.getData(self.dataPos, self.dataPos + self.spaceWidth + 1).values
-
         for i in range(self.position, self.position + self.spaceWidth):
-            self.data[(self.dataPos+i-self.position)%self.MaxPoint][0] = d[(i-self.position)%self.MaxPoint][0]
             l[i%self.MaxPoint] = None
-        self.dataPos += 10
+       
         self.position += 10
         self.position %= self.MaxPoint
         
+        li = {
+            ECGCanvasState.STOP : self.clear_display,
+            ECGCanvasState.NORMAL_DATA : self.update_ECGData
+        }
+        switch = li[self.currentState]
+        switch()
+        
+        # 音效
+        #audio.beep()
+        
+        # 使圖片不會左右亂跳
         l[0] = 0
         l[self.MaxPoint] = self.MaxPoint
         
         self.axes.cla()
+        # 移除標籤
         self.axes.axis('off')
+        self.axes.tick_params(axis='both', left='off', top='off', right='off', bottom='off', labelleft='off', labeltop='off', labelright='off', labelbottom='off')
+        
+        # 使繪製的圖比例不會跑掉
         self.axes.set_ylim((0, self.MaxPoint))
         self.axes.set_ylim((-0.5, 0.5))
         
-        self.axes.plot(l, self.data, 'r')
+        #hide_labels(self, self.axes)
+
+        # line color : #ffff00 (yellow)
+        self.axes.plot(l, self.data, color='#ffff00')
         self.draw()
 
 app = QApplication(sys.argv)
