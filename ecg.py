@@ -14,8 +14,16 @@ class ECGData():
     def __init__(self):
         # Download data
         self.df = pd.read_csv("bio_100Hz.csv")
-        
+
+        """
+        self.dataLen = len(self.df.index)
+        """
+
     def getData(self, start=0, end=400):
+        """
+        if(end >= self.dataLen):
+            end = end - self.dataLen;
+        """
         return self.df.loc[start: end,['ECG']]
 
 class Figure_ECG(FigureCanvas):   # 通过继承FigureCanvas类，使得该类既是一个PyQt5的Qwidget，又是一个matplotlib的FigureCanvas，这是连接pyqt5与matplot                                          lib的关键
@@ -35,7 +43,7 @@ class Figure_ECG(FigureCanvas):   # 通过继承FigureCanvas类，使得该类�
         for i in range(100):
             # 清除原有图像
             plt.cla()
-            
+
             x = [1 + i,2,3,4,5,6,7,8,9]
             y = [23,21,32,13,3,132,13,3,1]
             self.axes.plot(x, y)

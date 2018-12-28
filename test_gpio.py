@@ -3,36 +3,25 @@ import threading
 import time
 import math
 
-def PiDriverSetup():
-    GPIO.setmode(GPIO.BOARD)       # Numbers GPIOs by physical location
+# pin11 --- led
+BtnPin = 12    # pin12 --- button
+BtnPin2 = 13
+BtnPin3 = 15
+BtnPin4 = 18
 
-def PiDriverDestroy():
-    GPIO.cleanup()                     # Release resource
-
-# state 'True' is light out
 class LedCtrl():
     def __init__(self, Led_Pin ):
         self.Led_Pin = Led_Pin
-        self.state = True
-
         GPIO.setup(Led_Pin, GPIO.OUT)   # Set LedPin's mode is output
         GPIO.output(self.Led_Pin, True)
-    def getState(self):
-        return self.state
     def LedOn(self):
-        self.state = False
-        GPIO.output(self.Led_Pin, self.state)
+        GPIO.output(self.Led_Pin, False)
     def LedOff(self):
-        self.state = True
-        GPIO.output(self.Led_Pin, self.state)
-    def LedSwitch(self):
-        if(self.state == True):
-            self.state = False
-        else:
-            self.state = True
-        GPIO.output(self.Led_Pin, self.state)
+        GPIO.output(self.Led_Pin, True)
     def __del__(self):
         GPIO.output(self.Led_Pin, True)
+
+
 
 class ButtonHandler(threading.Thread):
     def __init__(self, pin, func, edge='both', bouncetime=50):
@@ -66,6 +55,25 @@ class ButtonHandler(threading.Thread):
         self.t = threading.Timer(self.bouncetime, self.read)
         self.t.start()
 
+def setup():
+    GPIO.setmode(GPIO.BOARD)       # Numbers GPIOs by physical location
+
+def Btn2(ev=None):
+    led.LedOff()
+    print("2")
+
+def Btn3(ev=None):
+    print("3")
+
+def Btn4(ev=None):
+    led.LedOn()
+    print("4")
+
+#def loop():
+
+def destroy():
+    GPIO.cleanup()                     # Release resource
+
 class BeepCtrl():
     def __init__(self, Pin ):
         self.Pin = Pin
@@ -90,3 +98,51 @@ class BeepCtrl():
         GPIO.output(self.Pin, self.state)
     def __del__(self):
         GPIO.output(self.Pin, False)
+
+
+if __name__ == '__main__':     # Program start from here
+
+    setup()
+
+    Do=523
+    Re=587
+    Mi=659
+    Fa=698
+    So=784
+    La=880
+    Si=988
+    HDo=1047
+
+    BeepPin = 7
+    b = BeepCtrl(BeepPin)
+
+    b.beepTone(Do, 0.1)
+    time.sleep(1)
+    b.beepTone(Re, 0.1)
+    time.sleep(1)
+    b.beepTone(Mi, 0.1)
+    time.sleep(1)
+    b.beepTone(Fa, 0.1)
+    time.sleep(1)
+    b.beepTone(So, 0.1)
+    time.sleep(1)
+    b.beepTone(La, 0.1)
+
+    led = LedCtrl(11)
+    led.LedOn()
+
+    Btn22 = ButtonHandler(BtnPin2, Btn2, edge = 'rising')
+    Btn33 = ButtonHandler(BtnPin3, Btn3, edge = 'rising')
+    Btn44 = ButtonHandler(BtnPin4, Btn4, edge = 'rising')
+
+    Btn22.start()
+    Btn33.start()
+    Btn44.start()
+
+    print(GPIO.input(BtnPin3))
+    try:
+        #loop()
+        while True:
+            pass
+    except KeyboardInterrupt:  # When 'Ctrl+C' is pressed, the child program destroy() will be  executed.
+        destroy()
