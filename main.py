@@ -17,7 +17,15 @@ from matplotlib.figure import Figure
 
 # project module
 from ecg import ECGData
+from pi_driver import LedCtrl, ButtonHandler, PiDriverSetup, PiDriverDestroy
 # from audio import audio
+
+# Pin define
+LedPin = 11
+BtnPin = 12
+BtnPin2 = 13
+BtnPin3 = 15
+BtnPin4 = 18
  
 class MainWindow(QWidget):
     def __init__(self,parent=None):
@@ -42,6 +50,10 @@ class controlToolBoxUP(QWidget):
     def __init__(self,parent=None):
         QWidget.__init__(self)
         
+        self.led = LedCtrl(LedPin)
+        Btn4 = ButtonHandler(BtnPin4, self.A1Clicked, edge = 'rising')
+        Btn3 = ButtonHandler(BtnPin3, self.A2Clicked, edge = 'rising')
+        
         hbox = QHBoxLayout()
         A1 = QPushButton('A1 stop', self)
         A1.clicked.connect(self.A1Clicked) 
@@ -49,7 +61,9 @@ class controlToolBoxUP(QWidget):
         A2 = QPushButton('A2 resume', self)
         A2.clicked.connect(self.A2Clicked) 
         
-        A3 = QPushButton('A3', self)
+        A3 = QPushButton('A3 Make people up', self)
+        A3.clicked.connect(self.A3Clicked) 
+        
         A4 = QPushButton('A4', self)
         
         hbox.addWidget(A1)
@@ -62,6 +76,8 @@ class controlToolBoxUP(QWidget):
         self.ECG.setState(ECGCanvasState.STOP)
     def A2Clicked(self):
         self.ECG.setState(ECGCanvasState.NORMAL_DATA)
+    def A3Clicked(self):
+        self.led.LedOn()
     def setECG(self,  ecg):
         self.ECG  = ecg
         
@@ -133,7 +149,7 @@ class MyDynamicMplCanvas(MyMplCanvas):
     def __init__(self, *args, **kwargs):
         self.MaxPoint = 420
         self.position = 0
-        self.spaceWidth = 30
+        self.spaceWidth = 40
         self.dataPos = 0
         self.ecgData = ECGData()
         self.currentState = ECGCanvasState.NORMAL_DATA
@@ -154,12 +170,12 @@ class MyDynamicMplCanvas(MyMplCanvas):
         d = self.ecgData.getData(self.dataPos, self.dataPos + self.spaceWidth + 1).values
         for i in range(self.position, self.position + self.spaceWidth):
             self.data[(self.dataPos+i-self.position)%self.MaxPoint][0] = d[(i-self.position)%self.MaxPoint][0]
-        self.dataPos += 10
+        self.dataPos += self.spaceWidth
         
     def clear_display(self):
         for i in range(self.position, self.position + self.spaceWidth):
             self.data[(self.dataPos+i-self.position)%self.MaxPoint][0] = 0
-        self.dataPos += 10
+        self.dataPos += self.spaceWidth
         
     def update_figure(self):
 
@@ -169,7 +185,7 @@ class MyDynamicMplCanvas(MyMplCanvas):
         for i in range(self.position, self.position + self.spaceWidth):
             l[i%self.MaxPoint] = None
        
-        self.position += 10
+        self.position += self.spaceWidth
         self.position %= self.MaxPoint
         
         li = {
@@ -201,7 +217,9 @@ class MyDynamicMplCanvas(MyMplCanvas):
         self.axes.plot(l, self.data, color='#ffff00')
         self.draw()
 
+PiDriverSetup()
 app = QApplication(sys.argv)
 qb = MainWindow()
 qb.show()
 sys.exit(app.exec_())
+PiDriverDestroy()
