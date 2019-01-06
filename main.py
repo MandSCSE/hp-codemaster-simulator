@@ -1,9 +1,12 @@
+
 # encoding: utf-8
 
 import sys
+import os
 import  enum
 from PyQt5 import QtWidgets,QtCore
-from PyQt5.QtWidgets import (QWidget, QPushButton, QVBoxLayout, QHBoxLayout, QGridLayout, QApplication)
+from PyQt5.QtWidgets import (QWidget, QPushButton, QVBoxLayout,
+                QHBoxLayout, QGridLayout, QApplication, QSizePolicy)
 
 
 import matplotlib
@@ -27,7 +30,7 @@ import time
 
 # Pin define
 LedPin = 11
-BtnPin = 12
+BtnPin1 = 12
 BtnPin2 = 13
 BtnPin3 = 15
 BtnPin4 = 18
@@ -46,42 +49,58 @@ class MainWindow(QWidget):
     def __init__(self,parent=None):
         QWidget.__init__(self)
         self.setWindowTitle('心臟電擊器模擬器')
+        # self.setCursor(QCursor(Qt.BlankCursor))
         # ECG = displayECG()
         ECG = MyDynamicMplCanvas(self, width=5, height=4, dpi=100)
-        toolBoxUP = controlToolBoxUP()
+        toolBoxUP = controlToolBoxUP(self)
         toolBoxUP.setECG(ECG)
         toolBoxDown = controlToolBoxDown()
 
         grid = QGridLayout()
 
         grid.addWidget(toolBoxUP, 1, 0)
-        grid.addWidget(ECG, 2, 0, 3, 1)
-        grid.addWidget(toolBoxDown, 5, 0)
+        grid.addWidget(ECG, 2, 0, 5, 1)
+        grid.addWidget(toolBoxDown, 7, 0)
 
         self.setLayout(grid)
-        self.resize(480,320)
+        self.setGeometry(0,0,
+        QtWidgets.QDesktopWidget().screenGeometry().width(),
+        QtWidgets.QDesktopWidget().screenGeometry().height())
+
+        #self.setWindowState(QtCore.Qt.WindowMaximized)
+    def keyPressEvent(self, e):
+        if e.key() == Qt.Key_Escape:
+            self.close()
 
 class controlToolBoxUP(QWidget):
-    def __init__(self,parent=None):
+    def __init__(self, main, parent=None):
         QWidget.__init__(self)
 
+        self.main = main
+
         self.led = LedCtrl(LedPin)
-        Btn4 = ButtonHandler(BtnPin4, self.A1Clicked, edge = 'rising')
-        Btn3 = ButtonHandler(BtnPin3, self.A2Clicked, edge = 'rising')
-        Btn2 = ButtonHandler(BtnPin2, self.A3Clicked, edge = 'rising')
+        Btn1 = ButtonHandler(BtnPin1, self.A1Clicked, edge = 'rising')
+        Btn2 = ButtonHandler(BtnPin2, self.A2Clicked, edge = 'rising')
+        Btn3 = ButtonHandler(BtnPin3, self.A3Clicked, edge = 'rising')
+        Btn4 = ButtonHandler(BtnPin4, self.A4Clicked, edge = 'rising')
         self.b = BeepCtrl(7)
 
         hbox = QHBoxLayout()
         A1 = QPushButton('A1 stop', self)
+        A1.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         A1.clicked.connect(self.A1Clicked)
 
         A2 = QPushButton('A2 resume', self)
+        A2.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         A2.clicked.connect(self.A2Clicked)
 
         A3 = QPushButton('A3 Light on', self)
+        A3.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         A3.clicked.connect(self.A3Clicked)
 
-        A4 = QPushButton('A4', self)
+        A4 = QPushButton('A4 Quiz', self)
+        A4.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        A4.clicked.connect(self.A4Clicked)
 
         hbox.addWidget(A1)
         hbox.addWidget(A2)
@@ -96,6 +115,8 @@ class controlToolBoxUP(QWidget):
     def A3Clicked(self):
         self.led.LedSwitch()
         self.b.beepTone(Do, 0.1)
+    def A4Clicked(self):
+        self.main.close()
 
     def setECG(self,  ecg):
         self.ECG  = ecg
@@ -106,12 +127,16 @@ class controlToolBoxDown(QWidget):
 
         hbox = QHBoxLayout()
         B1 = QPushButton('B1', self)
+        B1.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         B1.setCheckable(True)
         B2 = QPushButton('B2', self)
+        B2.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         B2.setCheckable(True)
         B3 = QPushButton('B3', self)
+        B3.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         B3.setCheckable(True)
         B4 = QPushButton('B4', self)
+        B4.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         B4.setCheckable(True)
 
         hbox.addWidget(B1)
@@ -246,13 +271,11 @@ class simulator():
             qb.show()
             sys.exit(app.exec_())
 
-
-
         except KeyboardInterrupt:
             print("Exception: KeyboardInterrupt")
 
         finally:
             PiDriverDestroy()
-
+            os.system("systemctl poweroff")
 
 s = simulator()
